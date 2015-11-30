@@ -1,0 +1,28 @@
+{
+  "name": "tax",
+  "profiles": [
+    "default",
+    "dev",
+    "us"
+  ],
+  "label": null,
+  "version": "f9a64674e3951c100bf171130ca28203e73be93b",
+  "propertySources": [
+    {
+      "name": "https://github.com/spring-cloud-samples/config-repo/tax.properties",
+      "source": {
+        "tax.server.password": "pass",
+        "tax.server.username": "taxuser",
+        "tax.server.url": "http://taxservice.com/"
+      }
+    },
+    {
+      "name": "https://github.com/spring-cloud-samples/config-repo/application.yml",
+      "source": {
+        "info.description": "Spring Cloud Samples",
+        "info.url": "https://github.com/spring-cloud-samples",
+        "eureka.client.serviceUrl.defaultZone": "http://localhost:8761/eureka/"
+      }
+    }
+  ]
+}
