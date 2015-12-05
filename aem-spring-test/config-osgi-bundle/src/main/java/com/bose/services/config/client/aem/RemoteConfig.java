@@ -1,4 +1,4 @@
-package com.bose.aem.osgi;
+package com.bose.services.config.client.aem;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
