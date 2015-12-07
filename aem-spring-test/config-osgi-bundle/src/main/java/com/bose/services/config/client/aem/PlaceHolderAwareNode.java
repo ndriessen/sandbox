@@ -42,6 +42,13 @@ public class PlaceHolderAwareNode {
         return false;
     }
 
+    public String[] getAdditionalProfilesProperty(Node node) throws RepositoryException {
+        if (node != null && node.hasProperty(ManagedConfigurationMixin.PROPERTY_ADDITIONAL_PROFILES)) {
+            return PropertyUtils.getPropertyAsArray(node.getProperty(ManagedConfigurationMixin.PROPERTY_ADDITIONAL_PROFILES));
+        }
+        return new String[0];
+    }
+
     /**
      * Resolves all placeholders in the node properties, using the provided properties.
      *

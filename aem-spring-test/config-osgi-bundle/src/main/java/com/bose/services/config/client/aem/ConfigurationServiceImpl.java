@@ -14,7 +14,7 @@ import org.springframework.web.client.RestTemplate;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-@Component(immediate = true, name = "com.bose.services.config.client.aem.ConfigurationService")
+@Component(name = "com.bose.services.config.client.aem.ConfigurationService")
 @Service(ConfigurationService.class)
 public class ConfigurationServiceImpl implements ConfigurationService {
     private static final Logger logger = LoggerFactory.getLogger(ConfigurationServiceImpl.class);
@@ -65,43 +65,63 @@ public class ConfigurationServiceImpl implements ConfigurationService {
     }
 
     @Override
+    public boolean refresh(String name, String... additionalProfiles) {
+        Properties newProperties = getConfiguration(name, additionalProfiles);
+        String cacheKey = getCacheKey(name, additionalProfiles);
+        Properties currentProperties = this.configurationCache.get(cacheKey);
+        if (currentProperties == null || !newProperties.equals(currentProperties)) {
+            this.configurationCache.put(cacheKey, newProperties);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    @Override
     public Properties getProperties(String name, String... additionalProfiles) {
-        String cacheKey = name + "#" + StringUtils.arrayToCommaDelimitedString(additionalProfiles);
+        String cacheKey = getCacheKey(name, additionalProfiles);
         if (!this.configurationCache.containsKey(cacheKey)) {
             this.configurationCache.put(cacheKey, getConfiguration(name, additionalProfiles));
         }
         return this.configurationCache.get(cacheKey);
     }
 
+    private String getCacheKey(String name, String[] additionalProfiles) {
+        return name + "#" + StringUtils.arrayToCommaDelimitedString(additionalProfiles);
+    }
+
     protected Properties getConfiguration(String name, String... additionalProfiles) {
-        Properties dictionary = new Properties();
-        RestTemplate restTemplate = new RestTemplate();
-        String profileList = StringUtils.collectionToCommaDelimitedString(getFinalProfiles(additionalProfiles));
-        logger.info("Querying service for configuration with name '{}' and profiles '{}'", name, profileList);
-        RemoteConfig response = restTemplate.getForObject(
-                String.format(CONFIG_SERVER_URL, name, profileList),
-                RemoteConfig.class);
-        if (response != null) {
-            Map<String, String> properties = new HashMap<>();
-            for (PropertySource source : response.getPropertySources()) {
-                @SuppressWarnings("unchecked")
-                Map<String, String> map = (Map<String, String>) source
-                        .getSource();
-                for (Map.Entry<String, String> entry : map.entrySet()) {
-                    if (!properties.containsKey(entry.getKey())) {
-                        properties.putIfAbsent(entry.getKey(), entry.getValue());
+        try {
+            Properties dictionary = new Properties();
+            RestTemplate restTemplate = new RestTemplate();
+            String profileList = StringUtils.collectionToCommaDelimitedString(getFinalProfiles(additionalProfiles));
+            logger.info("Querying service for configuration with name '{}' and profiles '{}'", name, profileList);
+            RemoteConfig response = restTemplate.getForObject(
+                    String.format(CONFIG_SERVER_URL, name, profileList),
+                    RemoteConfig.class);
+            if (response != null) {
+                Map<String, String> properties = new HashMap<>();
+                for (PropertySource source : response.getPropertySources()) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, String> map = (Map<String, String>) source
+                            .getSource();
+                    for (Map.Entry<String, String> entry : map.entrySet()) {
+                        if (!properties.containsKey(entry.getKey())) {
+                            properties.putIfAbsent(entry.getKey(), entry.getValue());
+                        }
                     }
                 }
-
-            }
-            dictionary.putAll(properties);
-            logger.info("Retrieved {} properties for '{}': ", properties.size(), name);
-            if (logger.isDebugEnabled()) {
-                for (String key : properties.keySet()) {
-                    logger.debug("** {} = {}", key, properties.get(key));
+                dictionary.putAll(properties);
+                logger.info("Retrieved {} properties for '{}': ", properties.size(), name);
+                if (logger.isDebugEnabled()) {
+                    for (String key : properties.keySet()) {
+                        logger.debug("** {} = {}", key, properties.get(key));
+                    }
                 }
             }
+            return dictionary;
+        } catch (Throwable e) {
+            throw new ConfigurationException("Error while quering config service for configuration", e);
         }
-        return dictionary;
     }
 }

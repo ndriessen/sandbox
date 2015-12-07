@@ -1,8 +1,5 @@
 package com.bose.services.config.client.aem;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import javax.jcr.NamespaceRegistry;
 import javax.jcr.PropertyType;
 import javax.jcr.RepositoryException;
@@ -12,7 +9,7 @@ import javax.jcr.nodetype.NodeTypeTemplate;
 import javax.jcr.nodetype.PropertyDefinitionTemplate;
 
 /**
- * Class to define and work with the <code>bose:configuration</code> JCR mixin type.
+ * Class to define the <code>config:managed</code> JCR mixin type.
  *
  * @author Niki Driessen
  */
@@ -25,11 +22,8 @@ public final class ManagedConfigurationMixin {
     public static final String PROPERTY_LAST_UPDATE = PREFIX + "lastUpdate";
     public static final String PROPERTY_ADDITIONAL_PROFILES = PREFIX + "additionalProfiles";
 
-
-    private static final Logger logger = LoggerFactory.getLogger(ManagedConfigurationMixin.class);
-
     @SuppressWarnings("unchecked")
-    public static void registerMixin(Session session) throws RepositoryException {
+    public static void registerMixin(Session session) throws ConfigurationException {
         try {
             NodeTypeManager manager = session.getWorkspace().getNodeTypeManager();
             NamespaceRegistry ns = session.getWorkspace().getNamespaceRegistry();
@@ -66,7 +60,7 @@ public final class ManagedConfigurationMixin {
             manager.registerNodeType(nodeTypeTemplate, true);
             session.save();
         } catch (RepositoryException e) {
-            logger.error("Error registering custom mixin type. Configuration management will not work!", e);
+            throw new ConfigurationException("Error registering custom mixin type. Configuration management will not work!", e);
         }
     }
 }

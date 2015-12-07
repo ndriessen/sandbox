@@ -150,6 +150,16 @@
             <version>2.6.3</version>
         </dependency>
         <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>2.6.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>2.6.3</version>
+        </dependency>
+        <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.core</artifactId>
             <version>4.2.0</version>
@@ -157,6 +167,41 @@
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.service.component</artifactId>
+            <version>1.3.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.rabbitmq</groupId>
+            <artifactId>amqp-client</artifactId>
+            <version>3.5.6</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-bus</artifactId>
+            <version>1.1.0.BUILD-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>com.esotericsoftware</groupId>
+            <artifactId>kryo</artifactId>
+            <version>3.0.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.esotericsoftware</groupId>
+            <artifactId>reflectasm</artifactId>
+            <version>1.10.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm</artifactId>
+            <version>5.0.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.objenesis</groupId>
+            <artifactId>objenesis</artifactId>
+            <version>2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.esotericsoftware</groupId>
+            <artifactId>minlog</artifactId>
             <version>1.3.0</version>
         </dependency>
     </dependencies>
@@ -207,10 +252,10 @@
                     <instructions>
                         <Export-Package>com.bose.services.config.client.aem</Export-Package>
                         <!-- embed any dependencies with artifactId junit and scope runtime -->
-                        <Embed-Dependency>jackson-databind,org.apache.sling.commons.osgi</Embed-Dependency>
+                        <Embed-Dependency>asm,reflectasm,jackson-core,jackson-annotations,jackson-databind,org.apache.sling.commons.osgi,amqp-client,spring-cloud-bus,kryo,minlog,objenesis</Embed-Dependency>
                         <Include-Resource>{maven-resources},{maven-dependencies}</Include-Resource>
                         <!--Embed-Transitive>true</Embed-Transitive-->
-                        <Import-Package>!com.fasterxml.jackson.*,*</Import-Package>
+                        <Import-Package>!org.objectweb.*,!sun.*,!org.objenesis.*,!com.esotericsoftware.*,!com.fasterxml.jackson.*,!com.rabbitmq.client.*,!org.springframework.cloud.bus.*,!org.springframework.boot.*,!org.springframework.integration.*,!org.springframework.cloud.*,!org.springframework.messaging.*,*</Import-Package>
                     </instructions>
                 </configuration>
             </plugin>

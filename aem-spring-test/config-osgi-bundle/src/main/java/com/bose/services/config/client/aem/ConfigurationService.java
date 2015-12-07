@@ -4,8 +4,9 @@ import java.util.Properties;
 
 /**
  * Configuration Service interface for querying configuration on demand.
- * s
+ *
  */
 public interface ConfigurationService {
     Properties getProperties(String name, String... additionalProfiles);
+    boolean refresh(String name, String... additionalProfiles);
 }

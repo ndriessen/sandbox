@@ -3,21 +3,15 @@ package com.bose.services.config.client.aem;
 import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Reference;
-import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
+import org.apache.sling.jcr.api.SlingRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.CollectionUtils;
 
-import javax.jcr.Node;
-import javax.jcr.NodeIterator;
 import javax.jcr.Session;
-import javax.jcr.query.Query;
-import javax.jcr.query.QueryManager;
-import javax.jcr.query.QueryResult;
 import java.util.HashSet;
-import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
 
 /**
  *
@@ -48,56 +42,30 @@ public class ManagedConfigurationBootstrapLoader {
     private ResourceResolverFactory resourceResolverFactory;
     @Reference
     private ConfigurationService configurationService;
+    @Reference
+    private ManagedConfigurationTracker managedConfigurationTracker;
+    @Reference
+    private SlingRepository repository;
 
-    private void searchConfigNodes(Session session) {
-        try {
-            QueryManager queryManager = session.getWorkspace().getQueryManager();
-            Query query = queryManager.createQuery(QUERY_CONFIG_NODES, Query.JCR_SQL2);
-            QueryResult result = query.execute();
-            NodeIterator nodes = result.getNodes();
-            while (nodes.hasNext()) {
-                Node node = nodes.nextNode();
-                logger.info("Checking node {} for configuration placeholders", node.getPath());
-                String[] additionalProfiles = null;
-                if (node.hasProperty(ManagedConfigurationMixin.PROPERTY_ADDITIONAL_PROFILES)) {
-                    additionalProfiles = PropertyUtils.getPropertyAsArray(node.getProperty(ManagedConfigurationMixin.PROPERTY_ADDITIONAL_PROFILES));
-                }
-                Properties remoteProperties = configurationService.getProperties(node.getName(), additionalProfiles);
-                if (!CollectionUtils.isEmpty(remoteProperties)) {
-                    //only do work if we have actual properties...
-                    PlaceHolderAwareNode wrapper = new PlaceHolderAwareNode(node);
-                    if (wrapper.resolvePlaceholders(remoteProperties)) {
-                        //updated props
-                        session.save();
-                    }
-                }
-            }
-        } catch (Throwable e) {
-            logger.error("Error while boostrapping remote configuration. Property placeholders will not be replaced!", e);
-        }
-    }
+    private ExecutorService executorService;
+    private JcrSessionTemplate<Void> sessionTemplate;
 
     @Activate
     public void activate() {
         //this.paths = PropertyUtils.getPropertyAsSet(PROPERTY_PATHS, componentContext, DEFAULTS_PATHS);
         //this.nodeTypes = PropertyUtils.getPropertyAsSet(PROPERTY_NODE_TYPES, componentContext, DEFAULTS_NODE_TYPES);
-        Session session = null;
-        try {
-            if (this.resourceResolverFactory != null) {
-                ResourceResolver resourceResolver = resourceResolverFactory.getAdministrativeResourceResolver(null);
-                session = resourceResolver.adaptTo(Session.class);
 
-                ManagedConfigurationMixin.registerMixin(session);
-                searchConfigNodes(session);
-            } else {
-                logger.error("ObservationManager is <null>. Cannot register event listeners.");
-            }
+        try {
+            this.sessionTemplate = new JcrSessionTemplate<>(repository);
+            this.sessionTemplate.execute(new JcrSessionTemplate.Callback<Void>() {
+                @Override
+                public Void execute(Session session) throws Exception {
+                    ManagedConfigurationMixin.registerMixin(session);
+                    return null;
+                }
+            });
         } catch (Exception e) {
             logger.error("Error bootstrapping managed configuration", e);
-        } finally {
-            if (session != null) {
-                session.logout();
-            }
         }
     }
 
@@ -121,5 +89,22 @@ public class ManagedConfigurationBootstrapLoader {
         this.resourceResolverFactory = null;
     }
 
+    @SuppressWarnings("unused")
+    public void bindManagedConfigurationTracker(ManagedConfigurationTracker managedConfigurationTracker) {
+        this.managedConfigurationTracker = managedConfigurationTracker;
+    }
+    @SuppressWarnings("unused")
+    public void unbindManagedConfigurationTracker(ManagedConfigurationTracker managedConfigurationTracker) {
+        this.managedConfigurationTracker = null;
+    }
 
+    @SuppressWarnings("unused")
+    public void bindSlingRepository(SlingRepository repository) {
+        this.repository = repository;
+    }
+
+    @SuppressWarnings("unused")
+    public void unbindSlingRepository(SlingRepository repository) {
+        this.repository = null;
+    }
 }
