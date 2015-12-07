@@ -17,7 +17,6 @@ public class PlaceHolderAwareNode {
     private static final Logger logger = LoggerFactory.getLogger(PlaceHolderAwareNode.class);
     private static final PropertyPlaceholderHelper placeholderHelper = new PropertyPlaceholderHelper("${", "}", ":", true);
     private Node node;
-    private String nodeName;
     private String nodePath;
 
     /**
@@ -28,7 +27,6 @@ public class PlaceHolderAwareNode {
      */
     public PlaceHolderAwareNode(Node node) throws RepositoryException {
         this.node = node;
-        this.nodeName = node.getName();
         this.nodePath = node.getPath();
     }
 
@@ -49,6 +47,29 @@ public class PlaceHolderAwareNode {
         return new String[0];
     }
 
+    protected void restorePlaceHolders() throws RepositoryException {
+        if (node.hasProperty(ManagedConfigurationMixin.PROPERTY_MANAGED_PROPS)) {
+            String[] value = PropertyUtils.getPropertyAsArray(node.getProperty(ManagedConfigurationMixin.PROPERTY_MANAGED_PROPS));
+            if (value != null) {
+                for (String entry : value) {
+                    String[] parts = entry.split("=");
+                    if (parts.length == 2) {
+                        String key = parts[0];
+                        String[] placeHolders = parts[1].split(",");
+                        if (placeHolders.length == 1) {
+                            node.setProperty(key, placeHolders[0]);
+                        } else {
+                            node.setProperty(key, placeHolders);
+                        }
+                    } else {
+                        logger.error("Illegal format in property " + ManagedConfigurationMixin.PROPERTY_MANAGED_PROPS + ", cannot parse entry: " + entry);
+                    }
+                }
+            }
+            node.setProperty(ManagedConfigurationMixin.PROPERTY_MANAGED_PROPS, new String[0]);
+        }
+    }
+
     /**
      * Resolves all placeholders in the node properties, using the provided properties.
      *
@@ -60,6 +81,10 @@ public class PlaceHolderAwareNode {
         try {
             if (!node.hasProperties()) return false;
             logger.info("Checking node '{}' for configuration placeholders", node.getPath());
+
+            this.restorePlaceHolders();
+            //and now run a placeholder resolution process again... note that we don't track the above as "changed" made, so they are
+            //reversed if we don't do anything else below that changes the nodes.
             PropertyIterator nodeProperties = node.getProperties();
             Set<String> changedProps = new HashSet<>();
             while (nodeProperties.hasNext()) {

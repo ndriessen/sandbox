@@ -65,6 +65,9 @@ public class ConfigurationServiceImpl implements ConfigurationService {
     }
 
     @Override
+    /**
+     * Refreshes the configuration.
+     */
     public boolean refresh(String name, String... additionalProfiles) {
         Properties newProperties = getConfiguration(name, additionalProfiles);
         String cacheKey = getCacheKey(name, additionalProfiles);
@@ -90,7 +93,7 @@ public class ConfigurationServiceImpl implements ConfigurationService {
         return name + "#" + StringUtils.arrayToCommaDelimitedString(additionalProfiles);
     }
 
-    protected Properties getConfiguration(String name, String... additionalProfiles) {
+    protected Properties getConfiguration(String name, String... additionalProfiles) throws ConfigurationException {
         try {
             Properties dictionary = new Properties();
             RestTemplate restTemplate = new RestTemplate();

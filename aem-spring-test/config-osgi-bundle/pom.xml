@@ -2,19 +2,11 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd ">
     <modelVersion>4.0.0</modelVersion>
-    <!-- ====================================================================== -->
-    <!-- P A R E N T P R O J E C T D E S C R I P T I O N -->
-    <!-- ====================================================================== -->
     <parent>
         <groupId>com.bose.aem</groupId>
         <artifactId>spring-test</artifactId>
         <version>1.0-SNAPSHOT</version>
     </parent>
-
-    <!-- ====================================================================== -->
-    <!-- P R O J E C T D E S C R I P T I O N -->
-    <!-- ====================================================================== -->
-
     <artifactId>config-osgi-bundle</artifactId>
     <packaging>bundle</packaging>
     <name>Bose Configuration Client OSGI</name>
@@ -23,25 +15,6 @@
         <spring.version>3.2.14.RELEASE_1</spring.version>
         <java.version>1.8</java.version>
     </properties>
-
-    <!--<dependencyManagement>-->
-        <!--<dependencies>-->
-            <!--<dependency>-->
-                <!--<groupId>org.springframework.cloud</groupId>-->
-                <!--<artifactId>spring-cloud-starter-parent</artifactId>-->
-                <!--<version>Brixton.M3</version>-->
-                <!--<type>pom</type>-->
-                <!--<scope>import</scope>-->
-            <!--</dependency>-->
-            <!--<dependency>-->
-                <!--<groupId>org.springframework.cloud</groupId>-->
-                <!--<artifactId>spring-cloud-bus-parent</artifactId>-->
-                <!--<version>1.0.2.RELEASE</version>-->
-                <!--<type>pom</type>-->
-                <!--<scope>import</scope>-->
-            <!--</dependency>-->
-        <!--</dependencies>-->
-    <!--</dependencyManagement>-->
 
     <dependencies>
         <dependency>
@@ -166,6 +139,11 @@
         </dependency>
         <dependency>
             <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.util.tracker</artifactId>
+            <version>1.5.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
             <artifactId>org.osgi.service.component</artifactId>
             <version>1.3.0</version>
         </dependency>
@@ -178,31 +156,6 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-bus</artifactId>
             <version>1.1.0.BUILD-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>com.esotericsoftware</groupId>
-            <artifactId>kryo</artifactId>
-            <version>3.0.3</version>
-        </dependency>
-        <dependency>
-            <groupId>com.esotericsoftware</groupId>
-            <artifactId>reflectasm</artifactId>
-            <version>1.10.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.ow2.asm</groupId>
-            <artifactId>asm</artifactId>
-            <version>5.0.3</version>
-        </dependency>
-        <dependency>
-            <groupId>org.objenesis</groupId>
-            <artifactId>objenesis</artifactId>
-            <version>2.1</version>
-        </dependency>
-        <dependency>
-            <groupId>com.esotericsoftware</groupId>
-            <artifactId>minlog</artifactId>
-            <version>1.3.0</version>
         </dependency>
     </dependencies>
 
@@ -250,12 +203,29 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
+                        <Bundle-Activator>com.bose.services.config.client.aem.RefreshChannelActivator</Bundle-Activator>
                         <Export-Package>com.bose.services.config.client.aem</Export-Package>
                         <!-- embed any dependencies with artifactId junit and scope runtime -->
-                        <Embed-Dependency>asm,reflectasm,jackson-core,jackson-annotations,jackson-databind,org.apache.sling.commons.osgi,amqp-client,spring-cloud-bus,kryo,minlog,objenesis</Embed-Dependency>
+                        <Embed-Dependency>
+                            jackson-core,
+                            jackson-annotations,
+                            jackson-databind,
+                            org.apache.sling.commons.osgi,
+                            amqp-client,
+                            spring-cloud-bus
+                        </Embed-Dependency>
                         <Include-Resource>{maven-resources},{maven-dependencies}</Include-Resource>
                         <!--Embed-Transitive>true</Embed-Transitive-->
-                        <Import-Package>!org.objectweb.*,!sun.*,!org.objenesis.*,!com.esotericsoftware.*,!com.fasterxml.jackson.*,!com.rabbitmq.client.*,!org.springframework.cloud.bus.*,!org.springframework.boot.*,!org.springframework.integration.*,!org.springframework.cloud.*,!org.springframework.messaging.*,*</Import-Package>
+                        <Import-Package>
+                            !com.fasterxml.jackson.*,
+                            !com.rabbitmq.client.*,
+                            !org.springframework.cloud.bus.*,
+                            !org.springframework.boot.*,
+                            !org.springframework.integration.*,
+                            !org.springframework.cloud.*,
+                            !org.springframework.messaging.*,
+                            *
+                        </Import-Package>
                     </instructions>
                 </configuration>
             </plugin>

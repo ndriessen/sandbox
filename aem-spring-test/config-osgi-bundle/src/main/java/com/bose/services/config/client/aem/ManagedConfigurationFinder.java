@@ -4,7 +4,6 @@ import org.apache.felix.scr.annotations.*;
 import org.apache.sling.jcr.api.SlingRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.util.CollectionUtils;
 
 import javax.jcr.Node;
 import javax.jcr.NodeIterator;
@@ -13,7 +12,6 @@ import javax.jcr.Session;
 import javax.jcr.query.Query;
 import javax.jcr.query.QueryManager;
 import javax.jcr.query.QueryResult;
-import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -41,8 +39,6 @@ public class ManagedConfigurationFinder implements Runnable {
 
     private ExecutorService searchThread;
 
-    public ManagedConfigurationFinder() {
-    }
 
     @Activate
     public void activate() {
@@ -80,18 +76,7 @@ public class ManagedConfigurationFinder implements Runnable {
                     while (nodes.hasNext()) {
                         Node node = nodes.nextNode();
                         try {
-                            logger.info("Checking node {} for configuration placeholders", node.getPath());
-                            PlaceHolderAwareNode wrapper = new PlaceHolderAwareNode(node);
-                            String[] additionalProfiles = wrapper.getAdditionalProfilesProperty(node);
-                            Properties remoteProperties = configurationService.getProperties(node.getName(), additionalProfiles);
-                            if (!CollectionUtils.isEmpty(remoteProperties)) {
-                                //only do work if we have actual properties...
-                                if (wrapper.resolvePlaceholders(remoteProperties)) {
-                                    //updated some props...
-                                    session.save();
-                                    managedConfigurationTracker.track(new ManagedConfiguration(node.getPath()));
-                                } //else: nothing changed...
-                            }
+                            managedConfigurationTracker.track(node.getPath());
                         } catch (RepositoryException e) {
                             logger.error("Error resolving placeholders, skipping node '{}'", node.getPath());
                         } catch (ConfigurationException e) {
