@@ -40,13 +40,6 @@ public class PlaceHolderAwareNode {
         return false;
     }
 
-    public String[] getAdditionalProfilesProperty() throws RepositoryException {
-        if (node != null && node.hasProperty(ManagedConfigurationMixin.PROPERTY_ADDITIONAL_PROFILES)) {
-            return PropertyUtils.getPropertyAsArray(node.getProperty(ManagedConfigurationMixin.PROPERTY_ADDITIONAL_PROFILES));
-        }
-        return new String[0];
-    }
-
     protected void restorePlaceHolders() throws RepositoryException {
         if (node.hasProperty(ManagedConfigurationMixin.PROPERTY_MANAGED_PROPS)) {
             String[] value = PropertyUtils.getPropertyAsArray(node.getProperty(ManagedConfigurationMixin.PROPERTY_MANAGED_PROPS));
@@ -55,17 +48,20 @@ public class PlaceHolderAwareNode {
                     String[] parts = entry.split("=");
                     if (parts.length == 2) {
                         String key = parts[0];
-                        String[] placeHolders = parts[1].split(",");
-                        if (placeHolders.length == 1) {
-                            node.setProperty(key, placeHolders[0]);
-                        } else {
-                            node.setProperty(key, placeHolders);
-                        }
+                        if (node.hasProperty(key)) {
+                            String[] placeHolders = parts[1].split(",");
+                            if (placeHolders.length == 1) {
+                                node.setProperty(key, placeHolders[0]);
+                            } else {
+                                node.setProperty(key, placeHolders);
+                            }
+                        } //else: property can have been deleted in the meanwhile, don't add it again..;
                     } else {
                         logger.error("Illegal format in property " + ManagedConfigurationMixin.PROPERTY_MANAGED_PROPS + ", cannot parse entry: " + entry);
                     }
                 }
             }
+            //reset meta-data
             node.setProperty(ManagedConfigurationMixin.PROPERTY_MANAGED_PROPS, new String[0]);
         }
     }
@@ -82,9 +78,11 @@ public class PlaceHolderAwareNode {
             if (!node.hasProperties()) return false;
             logger.info("Checking node '{}' for configuration placeholders", node.getPath());
 
+            //TODO: this breaks  the optimization logic below to check for "new" values, because we reset to placeholders, any value is new...
+            //TODO: copy old properties first to map and use that to check for actual changes
             this.restorePlaceHolders();
             //and now run a placeholder resolution process again... note that we don't track the above as "changed" made, so they are
-            //reversed if we don't do anything else below that changes the nodes.
+            //reversed if we don't do anything else below that changes the nodes (because only that saves the session)
             PropertyIterator nodeProperties = node.getProperties();
             Set<String> changedProps = new HashSet<>();
             while (nodeProperties.hasNext()) {

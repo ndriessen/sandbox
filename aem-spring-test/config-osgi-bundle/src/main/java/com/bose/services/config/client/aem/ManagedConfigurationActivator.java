@@ -4,6 +4,7 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import org.apache.sling.jcr.api.SlingRepository;
+import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
@@ -15,7 +16,7 @@ import javax.jcr.Session;
  * Bundle activator that manages registering a consumer to the AMQP refresh channel from spring cloud config.
  */
 @SuppressWarnings("Convert2Lambda")
-public class ManagedConfigurationActivator implements org.osgi.framework.BundleActivator {
+public class ManagedConfigurationActivator implements BundleActivator {
     private static final Logger logger = LoggerFactory.getLogger(ManagedConfigurationActivator.class);
     private static final String AMQP_REFRESH_CHANNEL = "binder.springCloudBus";
     private static final String CONSUMER_TAG = "aem.config.client";
@@ -70,7 +71,7 @@ public class ManagedConfigurationActivator implements org.osgi.framework.BundleA
                     }
                 });
             }
-        } catch (Exception e) {
+        } finally {
             bundleContext.ungetService(ref);
         }
     }

@@ -1,6 +1,5 @@
 package com.bose.services.config.client.aem;
 
-import org.apache.felix.scr.annotations.*;
 import org.apache.sling.jcr.api.SlingRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,8 +11,6 @@ import javax.jcr.Session;
 import javax.jcr.query.Query;
 import javax.jcr.query.QueryManager;
 import javax.jcr.query.QueryResult;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Searches for managed configuration, retrieves remote configuration properties, and resolves placeholders.
@@ -23,54 +20,31 @@ import java.util.concurrent.Executors;
  *
  * @author Niki Driessen
  */
-@Component(immediate = true)
-@Service(ManagedConfigurationFinder.class)
+//@Component(immediate = true)
+//@Service(ManagedConfigurationFinder.class)
 public class ManagedConfigurationFinder implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(ManagedConfigurationFinder.class);
-    private static final String QUERY_CONFIG_NODES = "SELECT * FROM [" + ManagedConfigurationMixin.NODE_TYPE + "] AS s WHERE ISDESCENDANTNODE([/apps])";
+    private static final String QUERY_CONFIG_NODES = "SELECT * FROM [%s] AS s WHERE ISDESCENDANTNODE([%s])";
 
-    private JcrSessionTemplate<Void> sessionTemplate;
-    @Reference
-    private ConfigurationService configurationService;
-    @Reference
     private ManagedConfigurationTracker managedConfigurationTracker;
-    @Reference
-    private SlingRepository repository;
+    private JcrSessionTemplate<Void> sessionTemplate;
+    private final String searchQuery;
 
-    private ExecutorService searchThread;
-
-
-    @Activate
-    public void activate() {
-        try {
-            searchThread = Executors.newSingleThreadExecutor();
-            searchThread.execute(this);
-        } catch (Exception e) {
-            logger.error("Error starting configuration finder thread", e);
-        }
-    }
-
-    @Deactivate
-    public void deactivate() {
-        try {
-            if (searchThread != null) {
-                searchThread.shutdownNow();
-            }
-        } catch (Exception e) {
-            //ignore, we tried to clean up
-        }
+    public ManagedConfigurationFinder(String searchPath, ManagedConfigurationTracker managedConfigurationTracker, SlingRepository repository) {
+        this.managedConfigurationTracker = managedConfigurationTracker;
+        this.sessionTemplate = new JcrSessionTemplate<Void>(repository);
+        this.searchQuery = String.format(QUERY_CONFIG_NODES, ManagedConfigurationMixin.NODE_TYPE, searchPath);
     }
 
     @Override
     public void run() {
         try {
-            this.sessionTemplate = new JcrSessionTemplate<>(repository);
-            this.sessionTemplate.execute(new JcrSessionTemplate.Callback<Void>() {
+            sessionTemplate.execute(new JcrSessionTemplate.Callback<Void>() {
                 @Override
                 public Void execute(Session session) throws Exception {
                     logger.info("Searching all managed configuration nodes in the JCR");
                     QueryManager queryManager = session.getWorkspace().getQueryManager();
-                    Query query = queryManager.createQuery(QUERY_CONFIG_NODES, Query.JCR_SQL2);
+                    Query query = queryManager.createQuery(searchQuery, Query.JCR_SQL2);
                     QueryResult result = query.execute();
                     NodeIterator nodes = result.getNodes();
                     while (nodes.hasNext()) {
@@ -91,33 +65,4 @@ public class ManagedConfigurationFinder implements Runnable {
         }
     }
 
-    @SuppressWarnings("unused")
-    public void bindConfigurationService(ConfigurationService configurationService) {
-        this.configurationService = configurationService;
-    }
-
-    @SuppressWarnings("unused")
-    public void unbindConfigurationService(ConfigurationService configurationService) {
-        this.configurationService = null;
-    }
-
-    @SuppressWarnings("unused")
-    public void bindManagedConfigurationTracker(ManagedConfigurationTracker managedConfigurationTracker) {
-        this.managedConfigurationTracker = managedConfigurationTracker;
-    }
-
-    @SuppressWarnings("unused")
-    public void unbindManagedConfigurationTracker(ManagedConfigurationTracker managedConfigurationTracker) {
-        this.managedConfigurationTracker = null;
-    }
-
-    @SuppressWarnings("unused")
-    public void bindSlingRepository(SlingRepository repository) {
-        this.repository = repository;
-    }
-
-    @SuppressWarnings("unused")
-    public void unbindSlingRepository(SlingRepository repository) {
-        this.repository = null;
-    }
 }

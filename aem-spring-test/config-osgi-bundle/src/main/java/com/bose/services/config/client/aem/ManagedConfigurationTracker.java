@@ -1,6 +1,10 @@
 package com.bose.services.config.client.aem;
 
 import org.apache.felix.scr.annotations.*;
+import org.apache.sling.api.resource.LoginException;
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ResourceResolverFactory;
 import org.apache.sling.jcr.api.SlingRepository;
 import org.osgi.service.component.ComponentContext;
 import org.slf4j.Logger;
@@ -35,6 +39,9 @@ public class ManagedConfigurationTracker {
     private ConfigurationService configurationService;
     @Reference
     private SlingRepository repository;
+    @Reference
+    private ResourceResolverFactory resourceResolverFactory;
+
     private JcrSessionTemplate<Void> sessionTemplate;
 
     /**
@@ -46,18 +53,28 @@ public class ManagedConfigurationTracker {
      * This method is thread-safe and can be called concurrently, but it <strong>MUST</strong> be called from with an active {@link javax.jcr.Session}.
      *
      * @param node the node to be tracked, not null.
+     * @return <code>true</code> if the node is now tracked, false if it was already tracked.
      * @throws ConfigurationException when configuring the tracked node failed.
      * @throws RepositoryException    when not accessed from within an active session or when the node could not be accessed for some reason (e.g. deleted).
      * @see ManagedConfiguration
      */
-    public void track(Node node) throws ConfigurationException, RepositoryException {
+    public boolean track(Node node) throws ConfigurationException, RepositoryException {
         Assert.notNull(node);
         String nodePath = node.getPath();
-        logger.info("Tracking node '{}' for managed configuration changes.", nodePath);
-        ManagedConfiguration configuration = new ManagedConfiguration(node);
+        //logger.info("Tracking node '{}' for managed configuration changes.", nodePath);
+        Resource resource = null;
+        try {
+            ResourceResolver resourceResolver = resourceResolverFactory.getAdministrativeResourceResolver(null);
+            resource = resourceResolver.getResource(node.getPath());
+        } catch (LoginException e) {
+            throw new RepositoryException("Error getting resource resolver", e);
+        }
+        ManagedConfiguration configuration = new ManagedConfiguration(resource);
         if (threadSafeWrite(configuration)) {
             try {
                 configuration.configure(configurationService, sessionTemplate);
+                logger.info("Successfully registered node '{}' for managed configuration tracking.", node.getPath());
+                return true;
             } catch (IllegalStateException e) {
                 /** this means the node couldn't be accessed by the configure run. This should only happen in race conditions,
                  * where the node is deleted in the time between the caller calling this method and the configure method accessing the node,
@@ -67,17 +84,38 @@ public class ManagedConfigurationTracker {
                 throw new RepositoryException("Error starting tracking on node, not adding to track list.", e);
             }
         }//else: nothing was added (re-register of node), so don't configure again
+        return false;
     }
 
     /**
      * Convenience method for {@link #untrack(ManagedConfiguration, Exception)} without an exception as a cause for untracking the node.
      *
-     * @see #untrack(ManagedConfiguration, Exception)
      * @param configuration the managed configuration to untrack, not null.
+     * @see #untrack(ManagedConfiguration, Exception)
      */
     @SuppressWarnings("unused")
     public void untrack(ManagedConfiguration configuration) {
         untrack(configuration, null);
+    }
+
+    /**
+     * Convenience method for {@link #untrack(ManagedConfiguration, Exception)} without an exception as a cause for untracking the node.
+     * This method is thread-safe and can be called concurrently, but it <strong>MUST</strong> be called from with an active {@link javax.jcr.Session}.
+     *
+     * @param path the path of the managed node to untrack, not null.
+     * @throws RepositoryException when not called from within an active session, or when the node cannot be accessed.
+     * @see #untrack(ManagedConfiguration, Exception)
+     */
+    @SuppressWarnings("unused")
+    public void untrack(String path) throws RepositoryException {
+        Assert.notNull(path);
+        Set<ManagedConfiguration> configurations = getManagedConfigurations();
+        for (ManagedConfiguration configuration : configurations) {
+            if (configuration.isForNode(path)) {
+                untrack(configuration);
+                return;
+            }
+        }
     }
 
     /**
@@ -166,6 +204,20 @@ public class ManagedConfigurationTracker {
         refresh(REFRESH_ALL);
     }
 
+    /**
+     * Convenience method for {@link #refresh(String)} with parameter {@link #REFRESH_ALL}.
+     *
+     * @see #refresh(String)
+     */
+    @SuppressWarnings("unused")
+    public void refresh(Node node) {
+        try {
+            refresh(node.getName());
+        } catch (RepositoryException e) {
+            logger.error("Error refreshing managed configuration for node, skipping refresh...");
+        }
+    }
+
     @Activate
     public void activate(ComponentContext componentContext) {
         try {
@@ -208,6 +260,15 @@ public class ManagedConfigurationTracker {
         this.repository = null;
     }
 
+    @SuppressWarnings("unused")
+    public void bindResourceResolverFactory(ResourceResolverFactory resourceResolverFactory) {
+        this.resourceResolverFactory = resourceResolverFactory;
+    }
+
+    @SuppressWarnings("unused")
+    public void unbindResourceResolverFactory(ResourceResolverFactory resourceResolverFactory) {
+        this.resourceResolverFactory = null;
+    }
 
     //    private RefreshRemoteApplicationEvent read(byte[] payload) throws Exception {
 //        ObjectMapper mapper = new ObjectMapper();

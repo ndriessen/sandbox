@@ -1,5 +1,7 @@
 package com.bose.services.config.client.aem;
 
+import com.day.cq.commons.inherit.HierarchyNodeInheritanceValueMap;
+import org.apache.sling.api.resource.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
@@ -24,18 +26,60 @@ public class ManagedConfiguration {
 
     /**
      * Creates a new managed configuration.
-     *
+     * <p>
      * This <strong>MUST</strong> be called from within an active {@link Session}.
      *
-     * @param node the node to manage, not null.
+     * @param resource the node to manage, not null.
      * @throws RepositoryException when not called from and active {@link Session}.
      */
-    public ManagedConfiguration(Node node) throws RepositoryException {
-        Assert.notNull(node);
-        this.nodePath = node.getPath();
-        this.configurationName = node.getName();
-        PlaceHolderAwareNode wrapper = new PlaceHolderAwareNode(node);
-        this.profiles = wrapper.getAdditionalProfilesProperty();
+    public ManagedConfiguration(Resource resource) throws RepositoryException {
+        Assert.notNull(resource);
+        this.nodePath = resource.getPath();
+        this.configurationName = getConfigurationName(resource);
+        this.profiles = getAdditionalProfilesProperty(resource);
+    }
+
+    /**
+     * Strategy for determining the configuration name.
+     * If a property {@link ManagedConfigurationMixin#PROPERTY_CONFIG_NAME} is specified, that value is used,
+     * otherwise, the node's name is used.
+     *
+     * @param resource the resource to get the config name for.
+     * @return the configuration name.
+     * @throws RepositoryException when access to the node fails.
+     */
+    protected String getConfigurationName(Resource resource) throws RepositoryException {
+        Node node = resource.adaptTo(Node.class);
+        if (node.hasProperty(ManagedConfigurationMixin.PROPERTY_CONFIG_NAME)) {
+            return node.getProperty(ManagedConfigurationMixin.PROPERTY_CONFIG_NAME).getString();
+        } else {
+            return node.getName();
+        }
+    }
+
+    /**
+     * Strategy for determining the additional profiles to use for configuration.
+     * This is read from the {@link ManagedConfigurationMixin#PROPERTY_ADDITIONAL_PROFILES} property WITH INHERITANCE.
+     * This allows you to e.g. define the profiles on a folder, and have ALL managed config nodes below that, inherited the profiles.
+     *
+     * @param resource the resource to get the profiles for.
+     * @return the list of profiles, if any.
+     * @throws RepositoryException when retrieving the profiles fails.
+     * @see HierarchyNodeInheritanceValueMap#getInherited(String, Class)
+     */
+    protected String[] getAdditionalProfilesProperty(Resource resource) throws RepositoryException {
+        return new HierarchyNodeInheritanceValueMap(resource)
+                .getInherited(ManagedConfigurationMixin.PROPERTY_ADDITIONAL_PROFILES, new String[0]);
+    }
+
+    /**
+     * CHeck if this managed config if for the given node.
+     *
+     * @param nodePath the path of the node, not null
+     * @return <code>true</code> if this configuration is for the given node.
+     */
+    public boolean isForNode(String nodePath) {
+        return nodePath != null && nodePath.equalsIgnoreCase(nodePath);
     }
 
     /**
@@ -87,7 +131,7 @@ public class ManagedConfiguration {
                     Node node = session.getNode(getNodePath());
                     if (node != null) {
                         PlaceHolderAwareNode wrapper = new PlaceHolderAwareNode(node);
-                        if (!refresh || configurationService.refresh(node.getName(), profiles)) {
+                        if (!refresh || configurationService.refresh(configurationName, profiles)) {
                             Properties remoteProperties = configurationService.getProperties(configurationName, profiles);
                             if (!CollectionUtils.isEmpty(remoteProperties)) {
                                 logger.info("Configuration has been changed for '{}', updating node...", ManagedConfiguration.this.toString());

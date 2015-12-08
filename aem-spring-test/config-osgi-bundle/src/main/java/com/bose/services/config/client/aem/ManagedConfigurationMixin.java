@@ -25,6 +25,7 @@ public final class ManagedConfigurationMixin {
     public static final String PROPERTY_MANAGED_PROPS = PREFIX + "managedProps";
     public static final String PROPERTY_LAST_UPDATE = PREFIX + "lastUpdate";
     public static final String PROPERTY_ADDITIONAL_PROFILES = PREFIX + "additionalProfiles";
+    public static final String PROPERTY_CONFIG_NAME = PREFIX + "configName";
 
     @SuppressWarnings("unchecked")
     public static void registerMixin(Session session) throws ConfigurationException {
@@ -43,6 +44,11 @@ public final class ManagedConfigurationMixin {
             managedPropsDefinition.setName(PROPERTY_MANAGED_PROPS);
             managedPropsDefinition.setMultiple(true);
             managedPropsDefinition.setMandatory(false);
+            // Create a new property
+            PropertyDefinitionTemplate configNameDefinition = manager.createPropertyDefinitionTemplate();
+            configNameDefinition.setName(PROPERTY_CONFIG_NAME);
+            configNameDefinition.setMultiple(false);
+            configNameDefinition.setMandatory(false);
             //managedPropsDefinition.setProtected(true);
             managedPropsDefinition.setRequiredType(PropertyType.STRING);
             PropertyDefinitionTemplate lastUpdateDefinition = manager.createPropertyDefinitionTemplate();
@@ -60,6 +66,7 @@ public final class ManagedConfigurationMixin {
             nodeTypeTemplate.getPropertyDefinitionTemplates().add(managedPropsDefinition);
             nodeTypeTemplate.getPropertyDefinitionTemplates().add(lastUpdateDefinition);
             nodeTypeTemplate.getPropertyDefinitionTemplates().add(additionalProfilesDefinition);
+            nodeTypeTemplate.getPropertyDefinitionTemplates().add(configNameDefinition);
             /* Register node type */
             manager.registerNodeType(nodeTypeTemplate, true);
             session.save();

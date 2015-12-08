@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd ">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd ">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.bose.aem</groupId>
@@ -157,6 +157,12 @@
             <artifactId>spring-cloud-bus</artifactId>
             <version>1.1.0.BUILD-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>com.day.cq</groupId>
+            <artifactId>cq-commons</artifactId>
+            <version>5.8.2</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <repositories>
@@ -203,7 +209,8 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Bundle-Activator>com.bose.services.config.client.aem.ManagedConfigurationActivator</Bundle-Activator>
+                        <Bundle-Activator>com.bose.services.config.client.aem.ManagedConfigurationActivator
+                        </Bundle-Activator>
                         <Export-Package>com.bose.services.config.client.aem</Export-Package>
                         <!-- embed any dependencies with artifactId junit and scope runtime -->
                         <Embed-Dependency>
@@ -250,11 +257,11 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                 <configuration>
+                <configuration>
                     <excludePackageNames>
                         *.impl
                     </excludePackageNames>
-                 </configuration>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
