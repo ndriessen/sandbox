@@ -103,6 +103,7 @@ public class ConfigurationServiceImpl implements ConfigurationService {
                     String.format(CONFIG_SERVER_URL, name, profileList),
                     RemoteConfig.class);
             if (response != null) {
+                //TODO: handle ecryption/decryption etc. Investigate aem's crypto service to see if we can store encrypted keys instead of plain text passes etc.
                 Map<String, String> properties = new HashMap<>();
                 for (PropertySource source : response.getPropertySources()) {
                     @SuppressWarnings("unchecked")
@@ -115,9 +116,10 @@ public class ConfigurationServiceImpl implements ConfigurationService {
                     }
                 }
                 dictionary.putAll(properties);
-                logger.info("Retrieved {} properties for '{}': ", properties.size(), name);
+                logger.info("Retrieved {} properties for '{}'", properties.size(), name);
                 if (logger.isDebugEnabled()) {
                     for (String key : properties.keySet()) {
+                        //TODO: boo boo for passwords etc, not even on debug!
                         logger.debug("** {} = {}", key, properties.get(key));
                     }
                 }

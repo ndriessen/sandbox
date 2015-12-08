@@ -17,6 +17,10 @@ public final class ManagedConfigurationMixin {
     private static final String NS = "config";
     private static final String NAMESPACE_URL = "http://www.bose.com/jcr/config";
     public static final String PREFIX = NS + ":";
+    /**
+     * The node type definition. This resolves to the combination of {@link #PREFIX} and <code>managed</code>.
+     * This defaults to <code>config:managed</code>.
+     */
     public static final String NODE_TYPE = PREFIX + "managed";
     public static final String PROPERTY_MANAGED_PROPS = PREFIX + "managedProps";
     public static final String PROPERTY_LAST_UPDATE = PREFIX + "lastUpdate";

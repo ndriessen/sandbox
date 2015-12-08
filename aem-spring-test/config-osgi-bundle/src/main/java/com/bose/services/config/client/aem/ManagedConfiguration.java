@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
 
 import javax.jcr.Node;
 import javax.jcr.RepositoryException;
@@ -11,16 +12,30 @@ import javax.jcr.Session;
 import java.util.Properties;
 
 /**
- * Simple VO to track some meta data concerning our managed configurations.
+ * Main worker class, this handles configuring managed configuration nodes.
+ *
+ * @author Niki Driessen
  */
 public class ManagedConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(ManagedConfigurationTracker.class);
     private String nodePath;
     private String configurationName;
+    private String[] profiles;
 
+    /**
+     * Creates a new managed configuration.
+     *
+     * This <strong>MUST</strong> be called from within an active {@link Session}.
+     *
+     * @param node the node to manage, not null.
+     * @throws RepositoryException when not called from and active {@link Session}.
+     */
     public ManagedConfiguration(Node node) throws RepositoryException {
+        Assert.notNull(node);
         this.nodePath = node.getPath();
         this.configurationName = node.getName();
+        PlaceHolderAwareNode wrapper = new PlaceHolderAwareNode(node);
+        this.profiles = wrapper.getAdditionalProfilesProperty();
     }
 
     /**
@@ -32,9 +47,10 @@ public class ManagedConfiguration {
      * @param sessionTemplate      the {@see JcrSessionTemplate} to use, not null.
      * @return <code>true</code> if any properties were updated on the node.
      * @throws ConfigurationException when configuring the node failed.
+     * @throws IllegalStateException  when the managed node can not be accessed. This could happen is the node gets deleted by another process.
      * @see #configure(ConfigurationService, JcrSessionTemplate, boolean)
      */
-    public boolean configure(ConfigurationService configurationService, JcrSessionTemplate sessionTemplate) throws ConfigurationException {
+    public boolean configure(ConfigurationService configurationService, JcrSessionTemplate sessionTemplate) throws ConfigurationException, IllegalStateException {
         return configure(configurationService, sessionTemplate, false);
     }
 
@@ -71,12 +87,10 @@ public class ManagedConfiguration {
                     Node node = session.getNode(getNodePath());
                     if (node != null) {
                         PlaceHolderAwareNode wrapper = new PlaceHolderAwareNode(node);
-
-                        String[] additionalProfiles = wrapper.getAdditionalProfilesProperty(node);
-                        if (!refresh || configurationService.refresh(node.getName(), additionalProfiles)) {
-                            Properties remoteProperties = configurationService.getProperties(configurationName, additionalProfiles);
+                        if (!refresh || configurationService.refresh(node.getName(), profiles)) {
+                            Properties remoteProperties = configurationService.getProperties(configurationName, profiles);
                             if (!CollectionUtils.isEmpty(remoteProperties)) {
-                                logger.info("Configuration has been changed for node '{}', updating node...", getNodePath());
+                                logger.info("Configuration has been changed for '{}', updating node...", ManagedConfiguration.this.toString());
                                 //only do work if we have actual properties...
                                 if (wrapper.resolvePlaceholders(remoteProperties)) {
                                     //updated some props...
@@ -84,10 +98,10 @@ public class ManagedConfiguration {
                                     return Boolean.TRUE;
                                 } //else: nothing changed...
                             } else {
-                                logger.warn("No properties found at configuration service for name '{}'", node.getName());
+                                logger.warn("No properties found at configuration service for '{}'", ManagedConfiguration.this.toString());
                             }
                         } else {
-                            logger.info("Configuration not changed for node '{}'", getNodePath());
+                            logger.info("Configuration not changed for '{}'", ManagedConfiguration.this.toString());
                         }
                     } else {
                         throw new IllegalStateException(String.format("Could not find node at '%s', maybe node was deleted?", getNodePath()));
@@ -96,7 +110,7 @@ public class ManagedConfiguration {
                 }
             });
         } catch (Exception e) {
-            throw new ConfigurationException("Error configuring managed node " + nodePath, e);
+            throw new ConfigurationException("Error configuring managed node: " + ManagedConfiguration.this.toString(), e);
         }
 
     }
@@ -105,10 +119,13 @@ public class ManagedConfiguration {
         return nodePath;
     }
 
+    public String getConfigurationName() {
+        return configurationName;
+    }
 
     @Override
     public int hashCode() {
-        return super.hashCode();
+        return nodePath.hashCode();
     }
 
     @Override
@@ -123,6 +140,7 @@ public class ManagedConfiguration {
 
     @Override
     public String toString() {
-        return super.toString();
+        return String.format("[Managed Configuration: '%s' (%s:%s)]",
+                nodePath, configurationName, StringUtils.arrayToCommaDelimitedString(profiles));
     }
 }

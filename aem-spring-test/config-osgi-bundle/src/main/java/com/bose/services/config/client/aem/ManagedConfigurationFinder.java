@@ -76,11 +76,11 @@ public class ManagedConfigurationFinder implements Runnable {
                     while (nodes.hasNext()) {
                         Node node = nodes.nextNode();
                         try {
-                            managedConfigurationTracker.track(node.getPath());
+                            managedConfigurationTracker.track(node);
                         } catch (RepositoryException e) {
-                            logger.error("Error resolving placeholders, skipping node '{}'", node.getPath());
+                            logger.error("Error creating managed configuration, issues with accessing the supplied node, skipping node '{}'", node.getPath());
                         } catch (ConfigurationException e) {
-                            logger.error("Could not retrieve remote confiugration, skipping node '{}'", node.getPath());
+                            logger.error("Could not configure the node, skipping node '{}'", node.getPath());
                         }
                     }
                     return null;

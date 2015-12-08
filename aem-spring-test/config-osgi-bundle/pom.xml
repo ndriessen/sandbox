@@ -203,7 +203,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Bundle-Activator>com.bose.services.config.client.aem.RefreshChannelActivator</Bundle-Activator>
+                        <Bundle-Activator>com.bose.services.config.client.aem.ManagedConfigurationActivator</Bundle-Activator>
                         <Export-Package>com.bose.services.config.client.aem</Export-Package>
                         <!-- embed any dependencies with artifactId junit and scope runtime -->
                         <Embed-Dependency>
